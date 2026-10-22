@@ -1,0 +1,5 @@
+# dsh-whale-files：往 profile 的层栈里插入本插件。
+# 条目 id `dsh-whale-files` 也就是设置页里这张卡片的命名空间。
+- insert:
+    - id: dsh-whale-files
+      name: dsh-whale-files

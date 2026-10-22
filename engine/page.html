@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>鲸鲸文件箱</title>
+<style>
+  :root{color-scheme:dark}
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.5 -apple-system,system-ui,"PingFang SC",sans-serif;
+       background:#0e1116;color:#e7eaee;padding:12px 12px 34px}
+  header{position:sticky;top:0;z-index:5;background:#0e1116;padding-bottom:8px}
+  h1{font-size:16px;margin:2px 0 8px;color:#cdd6e4;font-weight:600;display:flex;
+     justify-content:space-between;align-items:center}
+  #conn{font-size:12px;font-weight:400;padding:3px 8px;border-radius:20px;background:#1c2530;color:#7d8798}
+  #conn.ok{background:#12251a;color:#63d68f}
+  #conn.bad{background:#2a1417;color:#ff8a98}
+  .bar{display:flex;gap:8px;flex-wrap:wrap}
+  button,.btn{font:inherit;border:0;border-radius:9px;padding:9px 13px;background:#1e2531;
+        color:#dce3ee;cursor:pointer}
+  button:active{transform:scale(.97)}
+  .primary{background:#2b6cf6;color:#fff}
+  .danger{background:#3a1f24;color:#ff9aa6}
+  #crumbs{font-size:13px;color:#8b94a3;margin:8px 0 4px;word-break:break-all}
+  #crumbs a{color:#7fb0ff;text-decoration:none}
+  #abspath{font-size:11.5px;color:#6f7a8b;word-break:break-all;background:#131922;
+           border-radius:8px;padding:6px 9px;margin-bottom:4px;display:flex;gap:8px;align-items:flex-start}
+  #abspath code{flex:1;font-family:ui-monospace,monospace;color:#93a1b5}
+  #abspath button{padding:3px 8px;font-size:11px;background:#1c2531;flex:0 0 auto}
+  .hint{margin-top:9px;padding:9px 11px;border-radius:9px;background:#16202e;color:#9fb2cc;
+        font-size:12.5px;line-height:1.55}
+  .hint b{color:#8fb6ff}
+  ul{list-style:none;margin:10px 0 0;padding:0}
+  li{display:flex;align-items:center;gap:10px;padding:10px 8px;border-bottom:1px solid #1a2029}
+  li .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  li .nm small{display:block;color:#77808f;font-size:12px}
+  li .act{display:flex;gap:6px;flex-shrink:0}
+  li .act button{padding:6px 9px;font-size:13px;background:#171d27}
+  .ico{width:22px;text-align:center;flex-shrink:0}
+
+  /* 上传队列 */
+  #queue{display:none;margin-top:12px}
+  #queue.on{display:block}
+  .qhead{display:flex;justify-content:space-between;font-size:13px;color:#9aa3b2;margin-bottom:6px}
+  .qbar{height:6px;border-radius:6px;background:#1a212c;overflow:hidden}
+  .qbar i{display:block;height:100%;width:0;background:#2b6cf6;transition:width .15s}
+  .qitem{margin-top:9px;background:#141a22;border-radius:10px;padding:9px 11px;font-size:13px}
+  .qtop{display:flex;justify-content:space-between;gap:8px}
+  .qname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .qpct{color:#8fb6ff;white-space:nowrap}
+  .qitem.done .qpct{color:#63d68f}
+  .qitem.err .qpct{color:#ff8a98}
+  .qsub{color:#7c8697;font-size:12px;margin-top:3px}
+  .qbar2{height:4px;border-radius:4px;background:#1a212c;overflow:hidden;margin-top:6px}
+  .qbar2 i{display:block;height:100%;width:0;background:#3a7bff;transition:width .15s}
+
+  #toast{position:fixed;left:12px;right:12px;bottom:16px;padding:11px 14px;border-radius:11px;
+     background:#16351f;color:#b8f5c8;font-size:13.5px;display:none;box-shadow:0 8px 30px #0008}
+  #toast.on{display:block}
+
+  dialog{background:#141a22;color:#e7eaee;border:0;border-radius:14px;padding:0;max-width:96vw;
+         max-height:92vh;width:640px}
+  dialog::backdrop{background:#000a}
+  .dlg-h{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;
+         border-bottom:1px solid #222a36;font-size:14px}
+  .dlg-b{padding:12px 14px;max-height:70vh;overflow:auto}
+  .dlg-b img{max-width:100%;height:auto;border-radius:8px}
+  .dlg-b pre{margin:0;white-space:pre-wrap;word-break:break-word;font-size:13px}
+</style></head><body>
+<header>
+  <h1><span>🐳 鲸鲸文件箱</span><span id="conn">连接中…</span></h1>
+  <div class="bar">
+    <button id="upFiles">上传文件</button>
+    <button class="primary" id="upZip">上传 zip（整个文件夹）</button>
+    <button id="newDir">新建文件夹</button>
+    <button id="expHere">整目录存手机</button>
+    <button id="refresh">刷新</button>
+  </div>
+  <div id="crumbs"></div>
+  <div id="abspath"><code id="absnow">/</code><button id="copyPath">复制</button></div>
+  <input type="file" id="fFiles" multiple hidden>
+  <input type="file" id="fZip" multiple accept=".zip,.ZIP,application/zip,application/x-zip-compressed" hidden>
+  <div class="hint">传整个文件夹：在 MT 里长按文件夹 →「压缩」→ 回来点 <b>上传 zip</b>，我会自动解压、保留目录结构。</div>
+  <div id="queue">
+    <div class="qhead"><span id="qtitle">正在上传…</span><span id="qstat"></span></div>
+    <div class="qbar"><i id="qtotal"></i></div>
+    <div id="qitems"></div>
+  </div>
+</header>
+<ul id="list"></ul>
+<div id="toast"></div>
+
+<dialog id="dlg"><div class="dlg-h"><span id="dlgT"></span>
+  <button onclick="dlg.close()">关闭</button></div><div class="dlg-b" id="dlgB"></div></dialog>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>{let u=['B','KB','MB','GB'],i=0;while(n>=1024&&i<u.length-1){n/=1024;i++}return (i?n.toFixed(1):n)+u[i]};
+let cwd=localStorage.getItem('whale-cwd')||"";
+let alive=false, uploading=false, offlineSince=0;
+
+function setConn(ok,txt){
+  const el=$('#conn');
+  el.className=ok?'ok':'bad';el.textContent=txt;
+}
+function toast(msg,ms=2600){const t=$('#toast');t.textContent=msg;t.classList.add('on');
+  clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('on'),ms);}
+
+async function api(path,params={},timeout=8000){
+  const ctl=new AbortController();const timer=setTimeout(()=>ctl.abort(),timeout);
+  try{
+    const r=await fetch(path+'?'+new URLSearchParams(params),{signal:ctl.signal,cache:'no-store'});
+    const j=await r.json();
+    if(!alive){alive=true;offlineSince=0;setConn(true,'已连接');}
+    return j;
+  }catch(e){
+    if(alive||offlineSince===0){offlineSince=Date.now();}
+    alive=false;setConn(false,'连接断开');
+    throw e;
+  }finally{clearTimeout(timer)}
+}
+
+function crumbs(){
+  const bits=cwd?cwd.split("/"):[];
+  let acc="",html=`<a href="#" data-p="">根目录</a>`;
+  bits.forEach(b=>{acc=acc?acc+"/"+b:b;
+    html+=` / <a href="#" data-p="${esc(acc)}">${esc(b)}</a>`;});
+  $('#crumbs').innerHTML=html;
+  $('#crumbs').querySelectorAll('a').forEach(a=>a.onclick=e=>{
+    e.preventDefault();go(a.dataset.p);});
+}
+function go(p){
+  cwd=p;localStorage.setItem('whale-cwd',p);
+  try{history.replaceState(null,'',p?('#'+encodeURIComponent(p)):'#')}catch(_){}
+  load();
+}
+
+async function load(){
+  crumbs();
+  let r;
+  try{r=await api('api/list',{p:cwd})}catch(e){
+    $('#list').innerHTML="<li style='color:#ff8a98'>⚠️ 文件箱连不上了。点右上角「连接断开」或下面的按钮重试。</li>";
+    return;
+  }
+  if(!r.ok){$('#list').innerHTML="<li style='color:#ff8a98'>列目录失败："+esc(r.error)+"</li>";return}
+  $('#absnow').textContent=r.abs||r.root||'';
+  const ul=$('#list');ul.innerHTML="";
+  if(cwd){const li=document.createElement('li');
+    li.innerHTML=`<span class="ico">↩</span><span class="nm"><a href="#" style="color:#7fb0ff">.. 返回上级</a></span>`;
+    li.querySelector('a').onclick=e=>{e.preventDefault();
+      go(cwd.includes("/")?cwd.slice(0,cwd.lastIndexOf("/")):"");};
+    ul.appendChild(li);}
+  r.entries.forEach(e=>{
+    const li=document.createElement('li');
+    const icon=e.dir?"📁":(e.img?"🖼️":(e.text?"📄":"📦"));
+    li.innerHTML=`<span class="ico">${icon}</span><span class="nm">
+       <a href="#" style="color:#e7eaee;text-decoration:none">${esc(e.name)}</a>
+       <small>${e.dir?e.count+" 项":e.size_h}</small></span>
+       <span class="act"></span>`;
+    const act=li.querySelector('.act');
+    const mk=(t,fn,cls)=>{const b=document.createElement('button');b.textContent=t;
+      if(cls)b.className=cls;b.onclick=fn;act.appendChild(b);};
+    li.querySelector('.nm a').onclick=ev=>{ev.preventDefault();
+      if(e.dir){go(cwd?cwd+"/"+e.name:e.name)}else{openPreview(e)}};
+    mk('存手机',()=>exp(e));mk('移动',()=>mv(e));mk('改名',()=>ren(e));mk('删',()=>del(e),'danger');
+    ul.appendChild(li);
+  });
+  if(!r.entries.length)ul.innerHTML="<li style='color:#6c7686'>空目录</li>";
+}
+const join=n=>cwd?cwd+"/"+n:n;
+
+async function exp(e){
+  const name=e?e.name:'当前目录';
+  toast(`正在把「${name}」存到手机 Download/DSHA …`,6000);
+  try{
+    const r=await fetch('api/export',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({p:e?join(e.name):cwd})}).then(r=>r.json());
+    if(r.ok) toast(`✅ 已存到手机：Download/DSHA/（${name}）`,5000);
+    else toast('存手机失败：'+r.message,7000);
+  }catch(_){setConn(false,'连接断开');toast('存手机失败：连接断了',5000)}
+}
+$('#expHere').onclick=()=>exp(null);
+
+async function mv(e){
+  const hint=['目标目录（相对根目录，可直接写新文件名）',
+    '例：鲸鲸的记忆备份/故事',
+    '例：归档/'+e.name].join('\n');
+  let to=prompt(hint, cwd?cwd+'/'+e.name:e.name);
+  if(!to||to===join(e.name))return;
+  to=to.replace(/^\/+|\/+$/g,'');
+  try{
+    const r=await fetch('api/move',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({p:join(e.name),to})}).then(r=>r.json());
+    toast(r.ok?('已移动到 '+to):('移动失败：'+r.error));
+  }catch(_){setConn(false,'连接断开')}
+  load();
+}
+$('#copyPath').onclick=async()=>{
+  const t=$('#absnow').textContent;
+  try{await navigator.clipboard.writeText(t);toast('路径已复制')}
+  catch(_){prompt('复制这段路径',t)}
+};
+
+async function ren(e){
+  const nn=prompt('新名字',e.name);
+  if(!nn||nn===e.name)return;
+  const to=cwd?cwd+"/"+nn:nn;
+  try{
+    const r=await fetch('api/rename',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({p:join(e.name),to})}).then(r=>r.json());
+    toast(r.ok?('已改名为 '+nn):('改名失败：'+r.error));
+  }catch(_){setConn(false,'连接断开')}
+  load();
+}
+async function del(e){
+  if(!confirm(`删除「${e.name}」？${e.dir?"（含其中所有内容）":""}`))return;
+  try{
+    const r=await fetch('api/delete',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({p:join(e.name)})}).then(r=>r.json());
+    toast(r.ok?('已删除 '+e.name):('删除失败：'+r.error));
+  }catch(_){setConn(false,'连接断开')}
+  load();
+}
+async function openPreview(e){
+  let r;try{r=await api('api/preview',{p:join(e.name)})}catch(_){return}
+  if(!r.ok){toast(r.error);return}
+  $('#dlgT').textContent=e.name;
+  const b=$('#dlgB');
+  if(r.kind==='image')b.innerHTML=`<img src="api/raw?p=${encodeURIComponent(join(e.name))}">`;
+  else if(r.kind==='text')b.innerHTML=`<pre>${esc(r.text)}</pre>`;
+  else b.innerHTML=`<p>此类型不支持预览，需要的话用「存手机」取到手机上看。</p>`;
+  dlg.showModal();
+}
+
+// ─────────── 上传队列（带进度） ───────────
+function queueInit(files){
+  $('#queue').classList.add('on');
+  $('#qitems').innerHTML="";
+  $('#qtotal').style.width='0%';
+  $('#qtitle').textContent=`正在上传 ${files.length} 个文件`;
+  $('#qstat').textContent='0%';
+  $('#queue').dataset.total=files.length;
+  $('#queue').dataset.done=0;
+}
+function queueCard(name,size){
+  const d=document.createElement('div');d.className='qitem';
+  d.innerHTML=`<div class="qtop"><span class="qname">${esc(name)}</span>
+     <span class="qpct">等待…</span></div>
+     <div class="qsub">${fmt(size)}</div>
+     <div class="qbar2"><i></i></div>`;
+  $('#qitems').appendChild(d);return d;
+}
+function updateTotal(){
+  const q=$('#queue');const total=+q.dataset.total||1;
+  const frac=(+q.dataset.done)/total;
+  const pct=Math.min(100,frac*100);
+  $('#qtotal').style.width=pct.toFixed(1)+'%';
+  $('#qstat').textContent=pct.toFixed(0)+'%';
+}
+
+function uploadOne(file,rel){
+  return new Promise(res=>{
+    const card=queueCard(rel,file.size);
+    const pctEl=card.querySelector('.qpct'), subEl=card.querySelector('.qsub'),
+          barEl=card.querySelector('.qbar2 i');
+    const fd=new FormData();fd.append('file',file,rel);fd.append('dir',cwd);
+    const xhr=new XMLHttpRequest();xhr.open('POST','upload');
+    const t0=Date.now();
+    xhr.upload.onprogress=ev=>{
+      if(!ev.lengthComputable)return;
+      const p=ev.loaded/ev.total*100;
+      barEl.style.width=p.toFixed(1)+'%';
+      const sec=(Date.now()-t0)/1000||1;
+      const sp=ev.loaded/sec;
+      const eta=sp>0?Math.max(0,(ev.total-ev.loaded)/sp):0;
+      pctEl.textContent=p.toFixed(0)+'%';
+      subEl.textContent=(p<100)
+        ? `${fmt(ev.loaded)} / ${fmt(ev.total)} · ${fmt(sp)}/s${eta?` · 还剩 ${Math.ceil(eta)}s`:''}`
+        : '正在解压 / 收尾…';
+    };
+    xhr.onload=()=>{
+      let j={ok:false};try{j=JSON.parse(xhr.responseText)}catch(_){}
+      if(j.ok){
+        card.classList.add('done');barEl.style.width='100%';pctEl.textContent='完成';
+        subEl.textContent=j.size_h||fmt(file.size);
+        toast(`✅ ${file.name} 已上传`);
+      }else{
+        card.classList.add('err');pctEl.textContent='失败';
+        subEl.textContent=j.error||('HTTP '+xhr.status);
+        const rb=document.createElement('button');rb.textContent='重试';
+        rb.style.cssText='margin-top:6px;padding:5px 10px;font-size:12px';
+        rb.onclick=()=>{rb.disabled=true;rb.textContent='重试中…';uploadOne(file,rel).then(res)};
+        card.appendChild(rb);
+      }
+      $('#queue').dataset.done=(+$('#queue').dataset.done||0)+1;updateTotal();res();
+    };
+    xhr.onerror=()=>{
+      card.classList.add('err');pctEl.textContent='网络中断';
+      subEl.textContent='连接断了，请确认服务还在，然后点重试';
+      const rb=document.createElement('button');rb.textContent='重试';
+      rb.style.cssText='margin-top:6px;padding:5px 10px;font-size:12px';
+      rb.onclick=()=>{rb.disabled=true;rb.textContent='重试中…';uploadOne(file,rel).then(res)};
+      card.appendChild(rb);
+      setConn(false,'连接断开');res();
+    };
+    xhr.ontimeout=()=>{card.classList.add('err');pctEl.textContent='超时';res()};
+    xhr.send(fd);
+  });
+}
+
+async function sendFiles(files){
+  if(!files.length)return;
+  files=[...files].filter(f=>f&&f.size>=0);
+  queueInit(files);uploading=true;
+  let okCount=0;
+  for(const f of files){
+    const rel=f.webkitRelativePath||f.name;
+    await uploadOne(f,rel);
+  }
+  uploading=false;
+  const done=+$('#queue').dataset.done, total=+$('#queue').dataset.total;
+  $('#qtitle').textContent=`全部结束（${done}/${total}）`;
+  if(done===total){toast(`✅ 全部完成，共 ${total} 个文件`,4000);}
+  setTimeout(()=>{load()},400);
+}
+window.addEventListener('beforeunload',e=>{if(uploading){e.preventDefault();e.returnValue=''}});
+
+$('#upFiles').onclick=()=>$('#fFiles').click();
+$('#upZip').onclick=()=>$('#fZip').click();
+$('#refresh').onclick=()=>{load();ping()};
+$('#fFiles').onchange=e=>{sendFiles([...e.target.files]);e.target.value=''};
+$('#fZip').onchange=e=>{sendFiles([...e.target.files]);e.target.value=''};
+$('#newDir').onclick=async()=>{
+  const name=prompt('新文件夹名字');if(!name)return;
+  try{
+    const r=await fetch('api/mkdir',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({p:join(name)})}).then(r=>r.json());
+    toast(r.ok?('已建 '+name):('失败：'+r.error));
+  }catch(_){setConn(false,'连接断开')}
+  load();
+};
+
+// ─────────── 心跳：随时知道服务在不在 ───────────
+let pingTimer=null;
+async function ping(){
+  try{
+    const r=await fetch('api/ping',{cache:'no-store'});
+    const j=await r.json();
+    const wasDead=!alive;
+    alive=true;
+    setConn(true,`已连接 · v${j.version} · ${j.uptime}s`);
+    $('#conn').title=`服务进程 ${j.pid}，根目录 ${j.root}`;
+    if(wasDead){toast('连接已恢复');load();}
+  }catch(_){
+    if(alive){toast('⚠️ 连接断开，正在重试…',3000)}
+    alive=false;setConn(false,'连接断开');
+  }finally{
+    clearTimeout(pingTimer);pingTimer=setTimeout(ping,4000);
+  }
+}
+$('#conn').onclick=()=>{alive=false;ping();load();};
+
+// 启动
+(function init(){
+  const h=location.hash?v=>0:0;
+  if(location.hash&&location.hash.length>1){
+    try{cwd=decodeURIComponent(location.hash.slice(1));localStorage.setItem('whale-cwd',cwd)}catch(_){}
+  }
+  load();ping();
+})();
+</script></body></html>

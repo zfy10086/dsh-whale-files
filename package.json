@@ -1,0 +1,57 @@
+{
+  "name": "dsh-whale-files",
+  "version": "0.1.1",
+  "description": "鲸鲸文件箱：给手机端 DSHA 用户的无 root 文件传输与管理插件——绕开 Android 存储隔离，在设置页里传文件、传 zip 目录、移动、重命名、预览，一键存到手机 Download/DSHA",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "dsa",
+    "dsha",
+    "android",
+    "file-manager",
+    "file-transfer",
+    "zip-upload",
+    "no-root"
+  ],
+  "author": "zfy10086",
+  "license": "MIT",
+  "homepage": "https://github.com/zfy10086/dsh-whale-files",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zfy10086/dsh-whale-files.git"
+  },
+  "bugs": {
+    "url": "https://github.com/zfy10086/dsh-whale-files/issues"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "engine",
+    "cordis.patch.yml",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  }
+}
