@@ -6,6 +6,10 @@
 [![python](https://img.shields.io/badge/python-3.x-3572A5.svg)](#运行前提)
 
 > 给**手机端 DSHA** 用户的文件箱：**不给 root 权限**，也能把手机里的文件交给 AI、把 AI 做出来的东西拿回手机。
+ 
+<p align="center">
+  <img src="assets/logo.jpg" width="240" alt="鲸鲸">
+</p>
 
 ---
 
